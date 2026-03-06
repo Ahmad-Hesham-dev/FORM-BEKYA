@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BEKYA · entry</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #ffffff;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .login-card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 420px;
+      border-radius: 28px;
+      box-shadow: 0 12px 30px rgba(10, 61, 42, 0.08);
+      padding: 2.5rem 2rem;
+      border: 1px solid rgba(10, 61, 42, 0.15);
+    }
+
+    h1 {
+      color: #0A3D2A;
+      font-weight: 500;
+      font-size: 2rem;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.25rem;
+    }
+
+    .sub {
+      color: #0A3D2A;
+      font-size: 0.9rem;
+      opacity: 0.75;
+      margin-bottom: 2rem;
+      border-left: 3px solid #0A3D2A;
+      padding-left: 0.75rem;
+    }
+
+    .field {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      color: #0A3D2A;
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.3rem;
+    }
+
+    input, select {
+      width: 100%;
+      background: #ffffff;
+      border: 1.5px solid #0A3D2A;
+      border-radius: 16px;
+      padding: 0.85rem 1.2rem;
+      font-size: 1rem;
+      color: #0A3D2A;
+      outline: none;
+      transition: all 0.2s;
+      appearance: none;
+    }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230A3D2A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1.2rem center;
+      background-size: 1.2rem;
+    }
+
+    input:focus, select:focus {
+      border-color: #0A3D2A;
+      box-shadow: 0 0 0 3px rgba(10, 61, 42, 0.2);
+    }
+
+    input::placeholder {
+      color: #0A3D2A;
+      opacity: 0.5;
+      font-weight: 300;
+    }
+
+    button {
+      width: 100%;
+      background: #0A3D2A;
+      border: none;
+      border-radius: 40px;
+      padding: 1rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      margin-top: 1rem;
+      letter-spacing: 0.5px;
+      border: 1.5px solid #0A3D2A;
+    }
+
+    button:hover {
+      background: #0c4d33;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    /* better touch area */
+    @media (max-width: 480px) {
+      .login-card {
+        padding: 2rem 1.5rem;
+      }
+      input, select, button {
+        padding: 0.9rem 1rem;
+      }
+    }
+
+    /* very small devices */
+    @media (max-width: 360px) {
+      .login-card {
+        padding: 1.5rem 1rem;
+      }
+      h1 {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+  <!-- Dexie.js from CDN (latest stable) -->
+  <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+</head>
+<body>
+  <div class="login-card">
+    <h1>BEKYA</h1>
+    <div class="sub">platform access</div>
+
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label for="fullName">Full name</label>
+        <input type="text" id="fullName" name="fullName" placeholder="e.g. Amara Diallo" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="phone">Phone number</label>
+        <input type="tel" id="phone" name="phone" placeholder="+123 456 7890" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="role">Role</label>
+        <select id="role" name="role">
+          <option value="seller">seller</option>
+          <option value="outlet">outlet</option>
+          <option value="admin">admin</option>
+        </select>
+      </div>
+
+      <button type="submit" id="enterBtn">Enter →</button>
+    </form>
+  </div>
+
+  <script>
+    (function() {
+      // ---------- 1. Dexie database setup ----------
+      const db = new Dexie('BEKYADatabase');
+      db.version(1).stores({
+        Users: '++id, name, phone, role'
+      });
+
+      // ---------- 2. get form elements ----------
+      const form = document.getElementById('loginForm');
+      const nameInput = document.getElementById('fullName');
+      const phoneInput = document.getElementById('phone');
+      const roleSelect = document.getElementById('role');
+
+      // ---------- 3. form submit handler ----------
+      form.addEventListener('submit', async function(event) {
+        event.preventDefault();  // no page reload
+
+        // get values & trim
+        const name = nameInput.value.trim();
+        const phone = phoneInput.value.trim();
+        const role = roleSelect.value;
+
+        // validation – no empty fields
+        if (!name || !phone || !role) {
+          alert('❌ All fields are required.');
+          return;
+        }
+
+        // optional: quick phone sanity (but not required)
+        // just proceed
+
+        try {
+          // 4. save to IndexedDB via Dexie
+          await db.Users.add({
+            name: name,
+            phone: phone,
+            role: role
+          });
+
+          // 5. store in localStorage as requested
+          localStorage.setItem('userName', name);
+          localStorage.setItem('userPhone', phone);
+          localStorage.setItem('userRole', role);
+
+          // 6. redirect based on role
+          if (role === 'seller') {
+            window.location.href = 'https://ahmad-hesham-dev.github.io/SELLER-FORM-/';
+          } else if (role === 'outlet') {
+            window.location.href = 'https://ahmad-hesham-dev.github.io/OUTLET-FORM/';
+          } else if (role === 'admin') {
+            window.location.href = 'https://ahmad-hesham-dev.github.io/ADMINLFORM/';
+          } else {
+            // fallback – should never happen
+            alert('Role not recognised');
+          }
+        } catch (error) {
+          console.error('Dexie error:', error);
+          alert('⚠️ Failed to save user data. Please try again.');
+        }
+      });
+
+      // (optional) tiny ux: pressing Enter triggers submit naturally
+    })();
+  </script>
+</body>
+</html>
