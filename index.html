@@ -198,23 +198,38 @@
           return;
         }
 
-        // optional: quick phone sanity (but not required)
-        // just proceed
-
         try {
-          // 4. save to IndexedDB via Dexie
+          // 4. save to IndexedDB via Dexie (existing functionality)
           await db.Users.add({
             name: name,
             phone: phone,
             role: role
           });
 
-          // 5. store in localStorage as requested
+          // 5. store in localStorage as requested (users array)
+          let users = [];
+          const storedUsers = localStorage.getItem('users');
+          if (storedUsers) {
+            try {
+              users = JSON.parse(storedUsers);
+              if (!Array.isArray(users)) users = [];
+            } catch (e) {
+              users = [];
+            }
+          }
+          users.push({
+            username: name,
+            phone: phone,
+            role: role
+          });
+          localStorage.setItem('users', JSON.stringify(users));
+
+          // 6. also keep the original individual items (if needed elsewhere)
           localStorage.setItem('userName', name);
           localStorage.setItem('userPhone', phone);
           localStorage.setItem('userRole', role);
 
-          // 6. redirect based on role
+          // 7. redirect based on role (exactly as before)
           if (role === 'seller') {
             window.location.href = 'https://ahmad-hesham-dev.github.io/SELLER-FORM-/';
           } else if (role === 'outlet') {
@@ -222,7 +237,6 @@
           } else if (role === 'admin') {
             window.location.href = 'https://ahmad-hesham-dev.github.io/ADMINLFORM/';
           } else {
-            // fallback – should never happen
             alert('Role not recognised');
           }
         } catch (error) {
@@ -230,8 +244,6 @@
           alert('⚠️ Failed to save user data. Please try again.');
         }
       });
-
-      // (optional) tiny ux: pressing Enter triggers submit naturally
     })();
   </script>
 </body>
