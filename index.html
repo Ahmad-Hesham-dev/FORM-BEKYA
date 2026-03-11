@@ -19,6 +19,47 @@
       align-items: center;
       justify-content: center;
       padding: 1.5rem;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Dark mode styles (added for sync) */
+    body.dark-mode {
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+
+    body.dark-mode .login-card {
+      background: #1e1e1e;
+      border-color: #333;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    }
+
+    body.dark-mode h1,
+    body.dark-mode .sub,
+    body.dark-mode label {
+      color: #e0e0e0;
+    }
+
+    body.dark-mode input,
+    body.dark-mode select {
+      background: #2d2d2d;
+      border-color: #555;
+      color: #e0e0e0;
+    }
+
+    body.dark-mode select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23e0e0e0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    }
+
+    body.dark-mode input::placeholder {
+      color: #aaa;
+      opacity: 0.7;
+    }
+
+    body.dark-mode button {
+      background: #2e7d5e;
+      border-color: #2e7d5e;
+      color: #ffffff;
     }
 
     .login-card {
@@ -117,7 +158,6 @@
       transform: scale(0.98);
     }
 
-    /* better touch area */
     @media (max-width: 480px) {
       .login-card {
         padding: 2rem 1.5rem;
@@ -127,7 +167,6 @@
       }
     }
 
-    /* very small devices */
     @media (max-width: 360px) {
       .login-card {
         padding: 1.5rem 1rem;
@@ -137,39 +176,113 @@
       }
     }
   </style>
-  <!-- Dexie.js from CDN (latest stable) -->
+  <!-- Dexie.js from CDN (exactly as before) -->
   <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
 </head>
 <body>
   <div class="login-card">
-    <h1>BEKYA</h1>
-    <div class="sub">platform access</div>
+    <h1 data-i18n="logo">BEKYA</h1>
+    <div class="sub" data-i18n="platformAccess">platform access</div>
 
     <form id="loginForm" novalidate>
       <div class="field">
-        <label for="fullName">Full name</label>
-        <input type="text" id="fullName" name="fullName" placeholder="e.g. Amara Diallo" autocomplete="off">
+        <label for="fullName" data-i18n="fullNameLabel">Full name</label>
+        <input type="text" id="fullName" name="fullName" data-i18n-placeholder="fullNamePlaceholder" placeholder="e.g. Amara Diallo" autocomplete="off">
       </div>
 
       <div class="field">
-        <label for="phone">Phone number</label>
-        <input type="tel" id="phone" name="phone" placeholder="+123 456 7890" autocomplete="off">
+        <label for="phone" data-i18n="phoneLabel">Phone number</label>
+        <input type="tel" id="phone" name="phone" data-i18n-placeholder="phonePlaceholder" placeholder="+123 456 7890" autocomplete="off">
       </div>
 
       <div class="field">
-        <label for="role">Role</label>
+        <label for="role" data-i18n="roleLabel">Role</label>
         <select id="role" name="role">
-          <option value="seller">seller</option>
-          <option value="outlet">outlet</option>
-          <option value="admin">admin</option>
+          <option value="seller" data-i18n="sellerOption">seller</option>
+          <option value="outlet" data-i18n="outletOption">outlet</option>
+          <option value="admin" data-i18n="adminOption">admin</option>
         </select>
       </div>
 
-      <button type="submit" id="enterBtn">Enter →</button>
+      <button type="submit" id="enterBtn" data-i18n="enterBtn">Enter →</button>
     </form>
   </div>
 
   <script>
+    (function() {
+      // ----- SYNC: THEME & LANGUAGE (runs immediately) -----
+      const savedTheme = localStorage.getItem('theme');
+      const savedLang = localStorage.getItem('language') || 'en';
+
+      // Apply theme
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+      }
+
+      // Translation dictionary (mirrors landing page)
+      const translations = {
+        en: {
+          logo: 'BEKYA',
+          platformAccess: 'platform access',
+          fullNameLabel: 'Full name',
+          fullNamePlaceholder: 'e.g. Amara Diallo',
+          phoneLabel: 'Phone number',
+          phonePlaceholder: '+123 456 7890',
+          roleLabel: 'Role',
+          sellerOption: 'seller',
+          outletOption: 'outlet',
+          adminOption: 'admin',
+          enterBtn: 'Enter →'
+        },
+        ar: {
+          logo: 'بيكيا',
+          platformAccess: 'الدخول إلى المنصة',
+          fullNameLabel: 'الاسم الكامل',
+          fullNamePlaceholder: 'مثال: عمار ديالو',
+          phoneLabel: 'رقم الهاتف',
+          phonePlaceholder: '+123 456 7890',
+          roleLabel: 'الدور',
+          sellerOption: 'بائع',
+          outletOption: 'منفذ',
+          adminOption: 'مدير',
+          enterBtn: 'دخول ←'
+        }
+      };
+
+      if (savedLang === 'ar') {
+        document.documentElement.dir = 'rtl';
+        // Translate all elements with data-i18n
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          const key = el.getAttribute('data-i18n');
+          if (translations.ar[key]) {
+            // Special handling for select options (they are option elements)
+            if (el.tagName === 'OPTION') {
+              el.textContent = translations.ar[key];
+            } else {
+              el.textContent = translations.ar[key];
+            }
+          }
+        });
+        // Translate placeholders
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+          const key = el.getAttribute('data-i18n-placeholder');
+          if (translations.ar[key]) {
+            el.placeholder = translations.ar[key];
+          }
+        });
+      } else {
+        document.documentElement.dir = 'ltr';
+        // Ensure placeholders are set to English (default HTML already has them, but we keep consistency)
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+          const key = el.getAttribute('data-i18n-placeholder');
+          if (translations.en[key]) {
+            el.placeholder = translations.en[key];
+          }
+        });
+      }
+    })();
+
+    // ----- EXISTING DEXIE & FORM SUBMISSION LOGIC (completely preserved) -----
     (function() {
       // ---------- 1. Dexie database setup ----------
       const db = new Dexie('BEKYADatabase');
@@ -233,7 +346,7 @@
           if (role === 'seller') {
             window.location.href = 'https://ahmad-hesham-dev.github.io/SELLER-FORM-/';
           } else if (role === 'outlet') {
-            window.location.href = 'https://ahmad-hesham-dev.github.io/OUTLET-FORM/';
+            window.location.href = 'outlet/index.html';
           } else if (role === 'admin') {
             window.location.href = 'https://ahmad-hesham-dev.github.io/ADMINLFORM/';
           } else {
@@ -248,3 +361,5 @@
   </script>
 </body>
 </html>
+</html>
+
