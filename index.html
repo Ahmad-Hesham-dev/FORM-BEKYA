@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -153,7 +153,7 @@
 
       <div class="field">
         <label for="phone">Phone number</label>
-        <input type="tel" id="phone" name="phone" placeholder="+123 456 7890" autocomplete="off">
+        <input type="tel" id="phone" name="phone" placeholder="+20 123 456 7890" autocomplete="off">
       </div>
 
       <div class="field">
@@ -183,7 +183,105 @@
       const phoneInput = document.getElementById('phone');
       const roleSelect = document.getElementById('role');
 
-      // ---------- 3. form submit handler ----------
+      // ---------- Phone number validation (improved) ----------
+      // Create error message element
+      const phoneError = document.createElement('div');
+      phoneError.id = 'phoneError';
+      phoneError.style.color = '#d32f2f';
+      phoneError.style.fontSize = '0.8rem';
+      phoneError.style.marginTop = '4px';
+      phoneError.style.minHeight = '1.2rem';
+      phoneInput.parentNode.insertBefore(phoneError, phoneInput.nextSibling);
+
+      // Helper to compute new cursor position after cleaning
+      function getNewCursor(original, cleaned, oldPos) {
+        let newPos = 0;
+        let origIndex = 0;
+        let cleanIndex = 0;
+        // Walk through original up to oldPos, counting kept characters
+        while (origIndex < oldPos && cleanIndex < cleaned.length) {
+          if (original[origIndex] === cleaned[cleanIndex]) {
+            newPos++;
+            cleanIndex++;
+          }
+          origIndex++;
+        }
+        // If we reached oldPos, newPos is the count of kept chars before that point
+        // Clamp to cleaned length
+        return Math.min(newPos, cleaned.length);
+      }
+
+      // Clean and validate phone number
+      function validatePhoneNumber(value) {
+        // Remove any character that is not a digit or plus sign, but we'll handle plus separately
+        let hasLeadingPlus = value.startsWith('+');
+        // Extract all digits
+        let allDigits = value.replace(/\D/g, '');
+        // Limit digits to 11
+        let limitedDigits = allDigits.slice(0, 11);
+        // Build cleaned value: keep leading plus if originally present, otherwise no plus
+        let cleaned = hasLeadingPlus ? '+' + limitedDigits : limitedDigits;
+
+        // Validate: must start with '+20' and have 1 to 11 digits after
+        let isValid = cleaned.startsWith('+20') && cleaned.length >= 4 && cleaned.length <= 14;
+        let message = isValid ? '' : 'Phone must start with +20 and have 1 to 11 digits after it.';
+        return { isValid, message, cleaned };
+      }
+
+      // Input event: clean and validate in real time, preserve cursor
+      phoneInput.addEventListener('input', function(e) {
+        const original = e.target.value;
+        const start = e.target.selectionStart;
+        const end = e.target.selectionEnd;
+
+        const { isValid, message, cleaned } = validatePhoneNumber(original);
+
+        // Only update value if it changed to avoid cursor reset
+        if (original !== cleaned) {
+          e.target.value = cleaned;
+          // Adjust cursor position
+          const newCursor = getNewCursor(original, cleaned, start);
+          e.target.setSelectionRange(newCursor, newCursor);
+        }
+
+        // Update error message
+        phoneError.textContent = message;
+
+        // Style input based on validity (but only if not empty)
+        if (!isValid && cleaned !== '' && cleaned !== '+') {
+          phoneInput.style.borderColor = '#d32f2f';
+        } else {
+          phoneInput.style.borderColor = ''; // revert to default (CSS will apply #0A3D2A)
+        }
+      });
+
+      // Trigger initial validation (in case prefilled)
+      phoneInput.dispatchEvent(new Event('input'));
+
+      // Submit listener that runs BEFORE the existing one
+      form.addEventListener('submit', function(e) {
+        const raw = phoneInput.value;
+        const { isValid, message } = validatePhoneNumber(raw);
+        if (!isValid) {
+          e.preventDefault();
+          e.stopImmediatePropagation(); // prevent the original submit handler from running
+          phoneError.textContent = message || 'Invalid phone number';
+          phoneInput.style.borderColor = '#d32f2f';
+        }
+      });
+
+      // Also handle button click for good measure (though submit covers it)
+      document.getElementById('enterBtn').addEventListener('click', function(e) {
+        const raw = phoneInput.value;
+        const { isValid, message } = validatePhoneNumber(raw);
+        if (!isValid) {
+          e.preventDefault();
+          phoneError.textContent = message || 'Invalid phone number';
+          phoneInput.style.borderColor = '#d32f2f';
+        }
+      });
+
+      // ---------- 3. form submit handler (original) ----------
       form.addEventListener('submit', async function(event) {
         event.preventDefault();  // no page reload
 
@@ -248,3 +346,5 @@
   </script>
 </body>
 </html>
+</html>
+
