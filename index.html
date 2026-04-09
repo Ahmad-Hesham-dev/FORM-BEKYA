@@ -11,7 +11,6 @@
       padding: 0;
       box-sizing: border-box;
     }
-
     body {
       background: #ffffff;
       font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
@@ -21,7 +20,6 @@
       justify-content: center;
       padding: 1.5rem;
     }
-
     .login-card {
       background: #ffffff;
       width: 100%;
@@ -31,7 +29,6 @@
       padding: 2.5rem 2rem;
       border: 1px solid rgba(10, 61, 42, 0.15);
     }
-
     h1 {
       color: #0A3D2A;
       font-weight: 500;
@@ -39,7 +36,6 @@
       letter-spacing: -0.02em;
       margin-bottom: 0.25rem;
     }
-
     .sub {
       color: #0A3D2A;
       font-size: 0.9rem;
@@ -48,11 +44,9 @@
       border-left: 3px solid #0A3D2A;
       padding-left: 0.75rem;
     }
-
     .field {
       margin-bottom: 1.5rem;
     }
-
     label {
       display: block;
       color: #0A3D2A;
@@ -62,7 +56,6 @@
       letter-spacing: 0.02em;
       margin-bottom: 0.3rem;
     }
-
     input, select {
       width: 100%;
       background: #ffffff;
@@ -75,25 +68,21 @@
       transition: all 0.2s;
       appearance: none;
     }
-
     select {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230A3D2A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 1.2rem center;
       background-size: 1.2rem;
     }
-
     input:focus, select:focus {
       border-color: #0A3D2A;
       box-shadow: 0 0 0 3px rgba(10, 61, 42, 0.2);
     }
-
     input::placeholder {
       color: #0A3D2A;
       opacity: 0.5;
       font-weight: 300;
     }
-
     button {
       width: 100%;
       background: #0A3D2A;
@@ -109,15 +98,12 @@
       letter-spacing: 0.5px;
       border: 1.5px solid #0A3D2A;
     }
-
     button:hover {
       background: #0c4d33;
     }
-
     button:active {
       transform: scale(0.98);
     }
-
     @media (max-width: 480px) {
       .login-card {
         padding: 2rem 1.5rem;
@@ -126,7 +112,6 @@
         padding: 0.9rem 1rem;
       }
     }
-
     @media (max-width: 360px) {
       .login-card {
         padding: 1.5rem 1rem;
@@ -143,18 +128,15 @@
   <div class="login-card">
     <h1>BEKYA</h1>
     <div class="sub">platform access</div>
-
     <form id="loginForm" novalidate>
       <div class="field">
         <label for="fullName">Full name</label>
         <input type="text" id="fullName" name="fullName" placeholder="e.g. Amara Diallo" autocomplete="off">
       </div>
-
       <div class="field">
         <label for="phone">Phone number</label>
         <input type="tel" id="phone" name="phone" placeholder="+20 123 456 7890" autocomplete="off">
       </div>
-
       <div class="field">
         <label for="role">Role</label>
         <select id="role" name="role">
@@ -163,17 +145,20 @@
           <option value="admin">admin</option>
         </select>
       </div>
-
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="enter your password" autocomplete="off">
+      </div>
       <button type="submit" id="enterBtn">Enter →</button>
     </form>
   </div>
 
   <script>
     (function() {
-      // ---------- 1. Dexie database setup ----------
+      // ---------- 1. Dexie database setup (updated to v2 to support password) ----------
       const db = new Dexie('BEKYADatabase');
-      db.version(1).stores({
-        Users: '++id, name, phone, role'
+      db.version(2).stores({
+        Users: '++id, name, phone, role, password'
       });
 
       // ---------- 2. get form elements ----------
@@ -181,6 +166,12 @@
       const nameInput = document.getElementById('fullName');
       const phoneInput = document.getElementById('phone');
       const roleSelect = document.getElementById('role');
+      const passwordInput = document.getElementById('password');
+
+      // ---------- Password validation ----------
+      function isValidPassword(pw) {
+        return pw.length >= 8 && /^[a-zA-Z0-9]+$/.test(pw);
+      }
 
       // ---------- Phone number validation (unchanged) ----------
       const phoneError = document.createElement('div');
@@ -210,7 +201,6 @@
         let allDigits = value.replace(/\D/g, '');
         let limitedDigits = allDigits.slice(0, 11);
         let cleaned = hasLeadingPlus ? '+' + limitedDigits : limitedDigits;
-
         let isValid = cleaned.startsWith('+20') && cleaned.length >= 4 && cleaned.length <= 14;
         let message = isValid ? '' : 'Phone must start with +20 and have 1 to 11 digits after it.';
         return { isValid, message, cleaned };
@@ -220,15 +210,12 @@
         const original = e.target.value;
         const start = e.target.selectionStart;
         const { isValid, message, cleaned } = validatePhoneNumber(original);
-
         if (original !== cleaned) {
           e.target.value = cleaned;
           const newCursor = getNewCursor(original, cleaned, start);
           e.target.setSelectionRange(newCursor, newCursor);
         }
-
         phoneError.textContent = message;
-
         if (!isValid && cleaned !== '' && cleaned !== '+') {
           phoneInput.style.borderColor = '#d32f2f';
         } else {
@@ -259,49 +246,64 @@
         }
       });
 
-      // ---------- 3. form submit handler (original + userId integration) ----------
+      // ---------- 3. form submit handler (with password logic) ----------
       form.addEventListener('submit', async function(event) {
         event.preventDefault();
 
         const name = nameInput.value.trim();
         const phone = phoneInput.value.trim();
         const role = roleSelect.value;
+        const password = passwordInput.value.trim();
 
-        if (!name || !phone || !role) {
+        if (!name || !phone || !role || !password) {
           alert('❌ All fields are required.');
           return;
         }
 
+        if (!isValidPassword(password)) {
+          alert('❌ Password must contain letters and numbers, at least 8 characters.');
+          return;
+        }
+
+        // Check if password already exists (prevent duplicate password)
+        let users = [];
+        const storedUsers = localStorage.getItem('users');
+        if (storedUsers) {
+          try {
+            users = JSON.parse(storedUsers);
+            if (!Array.isArray(users)) users = [];
+          } catch (e) {
+            users = [];
+          }
+        }
+
+        const passwordExists = users.some(user => user.password === password);
+        if (passwordExists) {
+          alert('❌ This password is already used. Please choose a different password.');
+          return;
+        }
+
         try {
-          // ----- Added for userId integration -----
-          // Save to Dexie and capture the auto-generated id
+          // ----- Save to Dexie (now includes password) -----
           const userId = await db.Users.add({
             name: name,
             phone: phone,
-            role: role
+            role: role,
+            password: password
           });
 
           // Store the userId in localStorage for session tracking
           localStorage.setItem('currentUserId', userId);
 
-          // ----- Existing localStorage logic (unchanged) -----
-          let users = [];
-          const storedUsers = localStorage.getItem('users');
-          if (storedUsers) {
-            try {
-              users = JSON.parse(storedUsers);
-              if (!Array.isArray(users)) users = [];
-            } catch (e) {
-              users = [];
-            }
-          }
+          // ----- Save to localStorage (now includes password) -----
           users.push({
             username: name,
             phone: phone,
-            role: role
+            role: role,
+            password: password
           });
-          localStorage.setItem('users', JSON.stringify(users));
 
+          localStorage.setItem('users', JSON.stringify(users));
           localStorage.setItem('userName', name);
           localStorage.setItem('userPhone', phone);
           localStorage.setItem('userRole', role);
